@@ -1,0 +1,6 @@
+{
+    "port": "COM11",
+    "configuration": "cpu=atmega328",
+    "board": "arduino:avr:nano",
+    "sketch": "Counter-Limit.ino"
+}
