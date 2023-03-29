@@ -384,19 +384,19 @@ void _mainMenuFunc() {
               display.display();
               break;
             case 1:
-              Serial.print(myRTC.getYear(), DEC);
-              year = myRTC.getYear();
-              Serial.print(' ');
+              // Serial.print(myRTC.getYear(), DEC);
+              // year = myRTC.getYear();
+              // Serial.print(' ');
 
               // then the month
-              Serial.print(myRTC.getMonth(century), DEC);
-              month = myRTC.getMonth(century);
-              Serial.print(" ");
+              // Serial.print(myRTC.getMonth(century), DEC);
+              // month = myRTC.getMonth(century);
+              // Serial.print(" ");
 
-              // then the date
-              Serial.print(myRTC.getDate(), DEC);
-              date = myRTC.getDate();
-              Serial.print(" ");
+              // // then the date
+              // Serial.print(myRTC.getDate(), DEC);
+              // date = myRTC.getDate();
+              // Serial.print(" ");
 
               // // Finally the hour, minute, and second
               // Serial.print(myRTC.getHour(h12Flag, pmFlag), DEC);
@@ -469,9 +469,9 @@ void _mainMenuFunc() {
               break;
               case 5:
               // Set Date
-              myRTC.setYear(year);
-              myRTC.setMonth(month);
-              myRTC.setDate(date);
+              // myRTC.setYear(year);
+              // myRTC.setMonth(month);
+              // myRTC.setDate(date);
               myMenu[2] = 0;
               break;
           }
@@ -496,19 +496,19 @@ void _mainMenuFunc() {
               display.display();
               break;
              case 1:
-              Serial.print(myRTC.getYear(), DEC);
-              year = myRTC.getYear();
-              Serial.print(' ');
+              Serial.print("Get time: ");
+              // year = myRTC.getYear();
+              // Serial.print(' ');
 
-              // then the month
-              Serial.print(myRTC.getMonth(century), DEC);
-              month = myRTC.getMonth(century);
-              Serial.print(" ");
+              // // then the month
+              // Serial.print(myRTC.getMonth(century), DEC);
+              // month = myRTC.getMonth(century);
+              // Serial.print(" ");
 
-              // then the date
-              Serial.print(myRTC.getDate(), DEC);
-              date = myRTC.getDate();
-              Serial.print(" ");
+              // // then the date
+              // Serial.print(myRTC.getDate(), DEC);
+              // date = myRTC.getDate();
+              // Serial.print(" ");
 
               // // Finally the hour, minute, and second
               // Serial.print(myRTC.getHour(h12Flag, pmFlag), DEC);
@@ -529,15 +529,14 @@ void _mainMenuFunc() {
               display.setTextColor(WHITE);
               display.setCursor(0, 0);
               display.println(" ");            
-              display.print(" DATE = ");
-              display.print(" ");
+              display.print(" TIME = ");
               display.setTextColor(BLACK, WHITE);
-              display.print(date);
+              display.print(hour);
               display.setTextColor(WHITE);
               display.print(" ");
-              display.print(month);
+              display.print(minute);
               display.print(" ");
-              display.print(year);
+              display.print(second);
               display.print(" ");
               display.display();
             break;
@@ -548,15 +547,14 @@ void _mainMenuFunc() {
               display.setTextColor(WHITE);
               display.setCursor(0, 0);
               display.println(" ");            
-              display.print(" DATE = ");
-              display.print(" ");
-              display.print(date);
+              display.print(" TIME = ");
+              display.print(hour);
               display.print(" ");
               display.setTextColor(BLACK, WHITE);
-              display.print(month);
+              display.print(minute);
               display.setTextColor(WHITE);
               display.print(" ");
-              display.print(year);
+              display.print(second);
               display.print(" ");
               display.display();
               break;
@@ -567,23 +565,19 @@ void _mainMenuFunc() {
               display.setTextColor(WHITE);
               display.setCursor(0, 0);
               display.println(" ");            
-              display.print(" DATE = ");
+              display.print(" TIME = ");
+              display.print(hour);
               display.print(" ");
-              display.print(date);
-              display.print(" ");
-              display.print(month);
+              display.print(minute);
               display.print(" ");
               display.setTextColor(BLACK, WHITE);
-              display.print(year);
+              display.print(second);
               display.setTextColor(WHITE);
               display.print(" ");
               display.display();
               break;
               case 5:
               // Set Date
-              myRTC.setYear(year);
-              myRTC.setMonth(month);
-              myRTC.setDate(date);
               myMenu[2] = 0;
               break;
           }
@@ -607,6 +601,24 @@ void _mainMenuFunc() {
               display.println(" ALARM ");
               display.display();
               break;
+            case 1:
+              // Reset Counter
+            myMenu[2] = 2;
+            break;
+            case 2:
+              display.clearDisplay();
+              display.setTextSize(1);
+              display.setTextColor(BLACK, WHITE);  // 'inverted' text
+              display.setTextColor(WHITE);
+              display.setCursor(0, 0);
+              display.println(" ");
+              display.print(" LIMIT  ");
+              display.setTextColor(BLACK, WHITE);
+              display.println(limit);
+              display.setTextColor(WHITE);
+              display.println(" ");
+              display.display();
+            break;
           }
           break;
         case 3:
@@ -628,6 +640,26 @@ void _mainMenuFunc() {
               display.println(" ALARM ");
               display.display();
               break;
+            case 1:
+              // Reset Counter
+              myMenu[2] = 2;
+            break;
+            case 2:
+              display.clearDisplay();
+              display.setTextSize(1);
+              display.setTextColor(BLACK, WHITE);  // 'inverted' text
+              display.setTextColor(WHITE);
+              display.setCursor(0, 0);
+              display.println(" ");
+              display.setTextColor(BLACK, WHITE);
+              display.println(" DATE ");
+              display.println(" TIME ");
+              display.println(" COUNTER LIMIT ");
+              display.setTextColor(WHITE);
+              display.println(" RESET COUNTER ");
+              display.println(" ALARM ");
+              display.display();
+            break;
           }
           break;
         case 4:
