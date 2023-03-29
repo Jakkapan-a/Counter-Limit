@@ -28,6 +28,7 @@
         "xstring": "cpp",
         "xtree": "cpp",
         "associative_base": "cpp",
-        "serstream": "cpp"
+        "serstream": "cpp",
+        "utility": "cpp"
     }
 }
