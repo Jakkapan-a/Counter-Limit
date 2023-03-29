@@ -42,24 +42,29 @@ TcBUTTON Down(DownPin, DownPressed, DownReleased);
 TcBUTTON Enter(EnterPin, EnterPressed, EnterReleased);
 
 // Alarm Pin D3
-#define AlarmPin 3
+#define AlarmPin 7
 void AlarmPIsOn(bool);
 TcPINOUT Alarm(AlarmPin, AlarmPIsOn);
 
-long total = 0;
-long limit = 0;
+long total = 100;
+long limit = 200;
 
 // Time _time;
-uint8_t date = 0;
-uint8_t month = 0;
-uint16_t year = 0;
-uint16_t hour = 0;
-uint16_t minute = 0;
-uint16_t second = 0;
+uint8_t date = 1;
+uint8_t month = 1;
+uint16_t year = 1;
+uint16_t hour = 1;
+uint16_t minute = 1;
+uint16_t second = 1;
 
 int myMenu[3] = { 0, 0, 0 };
 int oldMenu[3] = { 0, 0, 0 };
+// void updateDisplay(int);
+const char* menuItems[] = { "DATE", "TIME", "COUNTER LIMIT", "RESET COUNTER", "ALARM" };
+const int numMenuItems = sizeof(menuItems) / sizeof(menuItems[0]);
 
+const char* normalMenu[] = { "TOTAL", "TOTAL LIMIT", "LIMIT","DATE", "TIME"};
+const int numNormalMenu = sizeof(normalMenu) / sizeof(normalMenu[0]);
 
 void setup() {
   Serial.begin(9600);
@@ -69,15 +74,34 @@ void setup() {
   display.begin(SH1106_SWITCHCAPVCC, 0x3C);
   // display.begin(i2c_Address, true);  // Address 0x3C default
   //display.setContrast (0); // dim display
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 0);
-  display.println(" ");
-  display.display();
+  updateDisplay();
+  // display.clearDisplay();
+  // display.setTextSize(1);
+  // display.setTextColor(WHITE);
+  // display.setCursor(0, 0);
+  // display.println(" ");
+  // // Print normalMenu and Add total and limit
+  // for (int i = 0; i < numNormalMenu; i++) {
+  //   if (i == 1) {
+  //     display.setTextColor(BLACK, WHITE);
+  //     display.print(" ");
+  //     display.print(normalMenu[i]);
+  //     display.println(" ");
+  //   } else {
+  //     display.setTextColor(WHITE);
+  //     display.print(" ");
+  //     display.print(normalMenu[i]);
+  //     display.println(" ");
+  //   }
+  // }
+
+  // display.display();
+  
   delay(1);
+  // updateDisplay(0);
   Serial.println("Started");
-  _mainMenuFunc();
+  // _mainMenuFunc();
+  
 }
 
 void loop() {
@@ -88,12 +112,12 @@ void loop() {
   Sensor.update();
 
 
-  if (myMenu[0] != oldMenu[0] || myMenu[1] != oldMenu[1] || myMenu[2] != oldMenu[2]) {
-    _mainMenuFunc();
-    oldMenu[0] = myMenu[0];
-    oldMenu[1] = myMenu[1];
-    oldMenu[2] = myMenu[2];
-  }
+  // if (myMenu[0] != oldMenu[0] || myMenu[1] != oldMenu[1] || myMenu[2] != oldMenu[2]) {
+  //   _mainMenuFunc();
+  //   oldMenu[0] = myMenu[0];
+  //   oldMenu[1] = myMenu[1];
+  //   oldMenu[2] = myMenu[2];
+  // }
 }
 
 void SensorPressed() {
@@ -124,7 +148,7 @@ void EscReleased() {
 void UpPressed() {
   Serial.println("Up Pressed");
   if (myMenu[0] == 1 && myMenu[1] != -1 && myMenu[2] == 0) {
-       myMenu[1]-=1;
+    myMenu[1] -= 1;
   }
   // 1 0 1 Show Date menu
   else if (myMenu[0] == 1 && myMenu[1] == 0 && myMenu[2] == 2) {
@@ -154,7 +178,7 @@ void UpPressed() {
   } else if (myMenu[0] == 1 && myMenu[1] == 1 && myMenu[2] == 0) {
     // 1 1 0
     // TIME MENU
-       myMenu[1]-=1;
+    myMenu[1] -= 1;
   } else if (myMenu[0] == 1 && myMenu[1] == 1 && myMenu[2] == 2) {
     // 1 1 2
     // TIME MENU
@@ -179,7 +203,7 @@ void UpPressed() {
   } else if (myMenu[0] == 1 && myMenu[1] == 2 && myMenu[2] == 0) {
     // 1 2 0
     // COUNTER LIMIT MENU
-    myMenu[1]-=1;
+    myMenu[1] -= 1;
   } else if (myMenu[0] == 1 && myMenu[1] == 2 && myMenu[2] == 2) {
     // 1 2 2
     // COUNTER LIMIT MENU
@@ -243,7 +267,7 @@ void DownPressed() {
   } else if (myMenu[0] == 1 && myMenu[1] == 1 && myMenu[2] == 0) {
     // 1 1 0
     // TIME MENU
-   myMenu[1] += 1;
+    myMenu[1] += 1;
   } else if (myMenu[0] == 1 && myMenu[1] == 1 && myMenu[2] == 2) {
     // 1 1 2
     // TIME MENU
@@ -321,6 +345,7 @@ void EnterPressed() {
   _mainMenuFunc();
 }
 void EnterReleased() {
+
 }
 
 void _mainMenuFunc() {
@@ -334,30 +359,18 @@ void _mainMenuFunc() {
     case 0:
       // Normal
       // 0 x x
-      switch(myMenu[1]){
+      switch (myMenu[1]) {
         case 0:
-        switch(myMenu[2]){
-          case 0:
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");
-              display.print(" TOTAL = ");
-              display.println(10000);
-              display.print(" LIMIT ");
-              display.println(100000);
-              display.print(" DATE ");
-              display.println(" ALARM ");
-              display.print(" TIME ");
-              display.println(" ALARM ");
-              display.display();
+          switch (myMenu[2]) {
+            case 0:
+             Serial.println("0 0 0");
+             updateDisplay();
+            // testdrawrect();
+             break;
+          }
           break;
-        }
-        break;
       }
- 
+
       break;
     case 1:
       // Setting Menu
@@ -368,111 +381,9 @@ void _mainMenuFunc() {
             case 0:
               // Date
               // 1 0 0
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");
-              display.setTextColor(BLACK, WHITE);
-              display.println(" DATE ");
-              display.setTextColor(WHITE);
-              display.println(" TIME ");
-              display.println(" COUNTER LIMIT ");
-              display.println(" RESET COUNTER ");
-              display.println(" ALARM ");
-              display.display();
-              break;
-            case 1:
-              // Serial.print(myRTC.getYear(), DEC);
-              // year = myRTC.getYear();
-              // Serial.print(' ');
-
-              // then the month
-              // Serial.print(myRTC.getMonth(century), DEC);
-              // month = myRTC.getMonth(century);
-              // Serial.print(" ");
-
-              // // then the date
-              // Serial.print(myRTC.getDate(), DEC);
-              // date = myRTC.getDate();
-              // Serial.print(" ");
-
-              // // Finally the hour, minute, and second
-              // Serial.print(myRTC.getHour(h12Flag, pmFlag), DEC);
-              // hour = myRTC.getHour(h12Flag, pmFlag);
-              // Serial.print(" ");
-              // Serial.print(myRTC.getMinute(), DEC);
-              // minute = myRTC.getMinute();
-              // Serial.print(" ");
-              // Serial.print(myRTC.getSecond(), DEC);
-              // second = myRTC.getSecond();
-              // // Next function call is to set the time and date
-              myMenu[2] = 2;
-              break;
-            case 2:
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");            
-              display.print(" DATE = ");
-              display.print(" ");
-              display.setTextColor(BLACK, WHITE);
-              display.print(date);
-              display.setTextColor(WHITE);
-              display.print(" ");
-              display.print(month);
-              display.print(" ");
-              display.print(year);
-              display.print(" ");
-              display.display();
-            break;
-            case 3:
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");            
-              display.print(" DATE = ");
-              display.print(" ");
-              display.print(date);
-              display.print(" ");
-              display.setTextColor(BLACK, WHITE);
-              display.print(month);
-              display.setTextColor(WHITE);
-              display.print(" ");
-              display.print(year);
-              display.print(" ");
-              display.display();
-              break;
-              case 4:
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");            
-              display.print(" DATE = ");
-              display.print(" ");
-              display.print(date);
-              display.print(" ");
-              display.print(month);
-              display.print(" ");
-              display.setTextColor(BLACK, WHITE);
-              display.print(year);
-              display.setTextColor(WHITE);
-              display.print(" ");
-              display.display();
-              break;
-              case 5:
-              // Set Date
-              // myRTC.setYear(year);
-              // myRTC.setMonth(month);
-              // myRTC.setDate(date);
-              myMenu[2] = 0;
+              Serial.println("1 0 0");
+              // updateDisplay(0);
+              testdrawrect();
               break;
           }
           break;
@@ -480,105 +391,9 @@ void _mainMenuFunc() {
           switch (myMenu[2]) {
             case 0:
               // 1 1 0
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");
-              display.println(" DATE ");
-              display.setTextColor(BLACK, WHITE);
-              display.println(" TIME ");
-              display.setTextColor(WHITE);
-              display.println(" COUNTER LIMIT ");
-              display.println(" RESET COUNTER ");
-              display.println(" ALARM ");
-              display.display();
-              break;
-             case 1:
-              Serial.print("Get time: ");
-              // year = myRTC.getYear();
-              // Serial.print(' ');
-
-              // // then the month
-              // Serial.print(myRTC.getMonth(century), DEC);
-              // month = myRTC.getMonth(century);
-              // Serial.print(" ");
-
-              // // then the date
-              // Serial.print(myRTC.getDate(), DEC);
-              // date = myRTC.getDate();
-              // Serial.print(" ");
-
-              // // Finally the hour, minute, and second
-              // Serial.print(myRTC.getHour(h12Flag, pmFlag), DEC);
-              // hour = myRTC.getHour(h12Flag, pmFlag);
-              // Serial.print(" ");
-              // Serial.print(myRTC.getMinute(), DEC);
-              // minute = myRTC.getMinute();
-              // Serial.print(" ");
-              // Serial.print(myRTC.getSecond(), DEC);
-              // second = myRTC.getSecond();
-              // // Next function call is to set the time and date
-              myMenu[2] = 2;
-              break;
-            case 2:
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");            
-              display.print(" TIME = ");
-              display.setTextColor(BLACK, WHITE);
-              display.print(hour);
-              display.setTextColor(WHITE);
-              display.print(" ");
-              display.print(minute);
-              display.print(" ");
-              display.print(second);
-              display.print(" ");
-              display.display();
-            break;
-            case 3:
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");            
-              display.print(" TIME = ");
-              display.print(hour);
-              display.print(" ");
-              display.setTextColor(BLACK, WHITE);
-              display.print(minute);
-              display.setTextColor(WHITE);
-              display.print(" ");
-              display.print(second);
-              display.print(" ");
-              display.display();
-              break;
-              case 4:
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");            
-              display.print(" TIME = ");
-              display.print(hour);
-              display.print(" ");
-              display.print(minute);
-              display.print(" ");
-              display.setTextColor(BLACK, WHITE);
-              display.print(second);
-              display.setTextColor(WHITE);
-              display.print(" ");
-              display.display();
-              break;
-              case 5:
-              // Set Date
-              myMenu[2] = 0;
+              // TIME
+              Serial.println("1 1 0");
+              updateDisplay(1);
               break;
           }
           break;
@@ -586,100 +401,30 @@ void _mainMenuFunc() {
           switch (myMenu[2]) {
             case 0:
               // 1 2 0
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");
-              display.println(" DATE ");
-              display.println(" TIME ");
-              display.setTextColor(BLACK, WHITE);
-              display.println(" COUNTER LIMIT ");
-              display.setTextColor(WHITE);
-              display.println(" RESET COUNTER ");
-              display.println(" ALARM ");
-              display.display();
+                Serial.println("1 2 0");
+              updateDisplay(2);
               break;
-            case 1:
-              // Reset Counter
-            myMenu[2] = 2;
-            break;
-            case 2:
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");
-              display.print(" LIMIT  ");
-              display.setTextColor(BLACK, WHITE);
-              display.println(limit);
-              display.setTextColor(WHITE);
-              display.println(" ");
-              display.display();
-            break;
           }
           break;
         case 3:
           switch (myMenu[2]) {
             case 0:
               // 1 3 0
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");
-              display.println(" DATE ");
-              display.println(" TIME ");
-              display.println(" COUNTER LIMIT ");
-              display.setTextColor(BLACK, WHITE);
-              display.println(" RESET COUNTER ");
-              display.setTextColor(WHITE);
-              display.println(" ALARM ");
-              display.display();
+              Serial.println("1 3 0");
+              updateDisplay(3);
               break;
             case 1:
               // Reset Counter
               myMenu[2] = 2;
-            break;
-            case 2:
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");
-              display.setTextColor(BLACK, WHITE);
-              display.println(" DATE ");
-              display.println(" TIME ");
-              display.println(" COUNTER LIMIT ");
-              display.setTextColor(WHITE);
-              display.println(" RESET COUNTER ");
-              display.println(" ALARM ");
-              display.display();
-            break;
+              break;
           }
           break;
         case 4:
           switch (myMenu[2]) {
             case 0:
               // 1 4 0
-              display.clearDisplay();
-              display.setTextSize(1);
-              display.setTextColor(BLACK, WHITE);  // 'inverted' text
-              display.setTextColor(WHITE);
-              display.setCursor(0, 0);
-              display.println(" ");
-              display.println(" DATE ");
-              display.println(" TIME ");
-              display.println(" COUNTER LIMIT ");
-              display.println(" RESET COUNTER ");
-              display.setTextColor(BLACK, WHITE);
-              display.println(" ALARM ");
-              display.setTextColor(WHITE);
-              display.display();
+              Serial.println("1 4 0");
+              updateDisplay(4);
               break;
           }
           break;
@@ -734,4 +479,57 @@ long readLong(int address) {
   value |= ((long)EEPROM.read(address + 2) << 16);
   value |= ((long)EEPROM.read(address + 3) << 24);
   return value;
+}
+
+void updateDisplay(int index) {
+  Serial.print("Index = ");
+  Serial.println(index);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(BLACK, WHITE);  // 'inverted' text
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0);
+  display.println(" ");
+  // Print normalMenu and Add total and limit
+  for (int i = 0; i < numMenuItems; i++) {
+    if (i == index) {
+      display.setTextColor(BLACK, WHITE);
+      display.print(" >");
+      display.print(menuItems[i]);
+      display.println(" ");
+      display.setTextColor(WHITE);
+    } else {
+    display.print(" ");
+    display.print(menuItems[i]);
+    display.println(" ");
+    }    
+  display.display();
+    delay(10);
+  }
+  Serial.println("UPDATE OK");
+}
+void updateDisplay(void) {
+  // Normal Menu
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(BLACK, WHITE);  // 'inverted' text
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0);
+  display.println(" ");
+  // Print normalMenu and Add total and limit
+  for (int i = 0; i < numNormalMenu; i++) {
+    display.print(" ");
+    display.print(normalMenu[i]);
+     display.println(" ");
+    display.display();
+      delay(10);
+  }
+  Serial.println("UPDATE NORMAL OK");
+}
+
+void testdrawrect(void) {
+  for (int16_t i=0; i<display.height()/2; i+=2) {
+    display.drawRect(i, i, display.width()-2*i, display.height()-2*i, WHITE);
+    display.display();
+  }
 }

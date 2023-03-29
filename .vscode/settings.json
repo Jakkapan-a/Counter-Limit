@@ -29,6 +29,10 @@
         "xtree": "cpp",
         "associative_base": "cpp",
         "serstream": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "variant": "cpp",
+        "atomic": "cpp",
+        "ios": "cpp",
+        "xiosbase": "cpp"
     }
 }

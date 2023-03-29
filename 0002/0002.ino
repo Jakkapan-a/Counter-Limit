@@ -366,6 +366,9 @@ int getMenuCode(){
 
 void _timer() {
   if (millis() - lastTime > 1000) {
+    if(isPressSoak){
+      
+    }
     lastTime = millis();
   } else if (millis() < 1000) {
     lastTime = millis();
