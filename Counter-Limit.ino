@@ -5,13 +5,13 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 
-// #include <DS3231.h>
+#include <DS3231.h>
 #include <EEPROM.h>
 
-// DS3231 myRTC;
-// bool century = false;
-// bool h12Flag;
-// bool pmFlag;
+DS3231 myRTC;
+bool century = false;
+bool h12Flag;
+bool pmFlag;
 
 /* Uncomment the initialize the I2C address , uncomment only one, If you get a totally blank screen try the other*/
 #define i2c_Address 0x3c  //initialize with the I2C addr 0x3C Typically eBay OLED's
@@ -98,13 +98,13 @@ void loop() {
   if (menu[0] != oldMenu[0] || menu[1] != oldMenu[1] || menu[2] != oldMenu[2]) {
     // Update the menu
  
-    Serial.println("ffffffffffffffffffffffffffffffffff");
-    Serial.print("Menu[ = ");
-    Serial.print(menu[0]);
-    Serial.print(", ");
-    Serial.print(menu[1]);
-    Serial.print(", ");
-    Serial.println(menu[2]);
+    // Serial.println("ffffffffffffffffffffffffffffffffff");
+    // Serial.print("Menu[ = ");
+    // Serial.print(menu[0]);
+    // Serial.print(", ");
+    // Serial.print(menu[1]);
+    // Serial.print(", ");
+    // Serial.println(menu[2]);
 
     oldMenu[0] = menu[0];
     oldMenu[1] = menu[1];
@@ -125,7 +125,103 @@ Serial.print("ts");
       break;
     case 1:
       // 1 x x
-     
+      switch (menu[1]) {
+        case 0 :
+        // 1 0 x
+        switch(menu[2]){
+          case 0:
+          // 1 0 0
+          // display.clearDisplay();
+          // display.setTextSize(1);
+          // display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 'inverted' text
+          // display.setTextColor(SH110X_WHITE);
+          // display.setCursor(0, 0);
+          // display.println("TESt");
+          // display.setTextColor(SH110X_BLACK, SH110X_WHITE);
+          // display.println("DATE");
+          // display.setTextColor(SH110X_WHITE);
+          // display.println("TIME");
+          // display.println("COUNTER LIMIT");
+          // display.println("RESET COUNTER");
+          // display.println("ALARM");
+          // display.display();
+          break;
+          case 1:
+          // 1 0 1
+          // DateTime now = myRTC.now();
+          // date = myRTC.getDate();
+          //  month = myRTC.getMonth(century);
+          // year = myRTC.getYear();
+
+          // Serial.print("Date = ");
+          // Serial.print(date);
+          // Serial.print(" ");
+          // Serial.print(month);
+          // Serial.print(" ");
+          // Serial.println(year);
+
+          
+          menu[2] = 2;
+          break;
+          case 2:
+          // 1 0 2
+          // DATE 
+          // display.clearDisplay();
+          // display.setTextSize(1);
+          // // display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 'inverted' text
+          // display.setTextColor(SH110X_WHITE);
+          // display.setCursor(0, 0);
+          // display.println(" ");       
+          // display.print("DATE = ");
+          // display.setTextColor(SH110X_BLACK, SH110X_WHITE);
+          // display.print(date,DEC);
+          // display.setTextColor(SH110X_WHITE);
+          // display.print(" ");
+          // display.print(month,DEC);
+          // display.print(" ");
+          // display.println(year,DEC);
+          // display.display();
+          break;
+          case 3:
+          // 1 0 3
+          // MONTH
+          // display.clearDisplay();
+          // display.setTextSize(1);
+          // // display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 'inverted' text
+          // display.setTextColor(SH110X_WHITE);
+          // display.setCursor(0, 0);
+          // display.println("");       
+          // display.print("DATE = ");
+          // display.print(date);
+          // display.print(" ");
+          // display.setTextColor(SH110X_BLACK, SH110X_WHITE);
+          // display.print(month);
+          // display.setTextColor(SH110X_WHITE);
+          // display.print(" ");
+          // display.println(year);
+          // display.display();
+          break;
+          case 4:
+          // 1 0 4
+          // YEAR
+          // display.clearDisplay();
+          // display.setTextSize(1);
+          // // display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 'inverted' text
+          // display.setTextColor(SH110X_WHITE);
+          // display.setCursor(0, 0);
+          // display.println("");
+          // display.print("DATE = ");
+          // display.print(date);
+          // display.print(" ");
+          // display.print(month);
+          // display.print(" ");
+          // display.setTextColor(SH110X_BLACK, SH110X_WHITE);
+          // display.println(year);
+          // display.display();
+          break;
+        }
+        break;
+      }
 
       break;
   }
@@ -249,7 +345,6 @@ void UpReleased() {
 }
 void DownPressed() {
   Serial.println("Down Released");
-
   if (menu[0] == 1 && menu[1] != -1 && menu[2] == 0) {
     menu[1]--;
   }
@@ -346,6 +441,31 @@ void EnterPressed() {
     }
   }
 
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+  display.setCursor(0, 0);
+
+  display.println("");
+  display.print("DATE ");
+  display.print(20);
+  display.print(" ");
+  display.print(3);
+  display.print(" ");
+  display.println(2023);
+  String _test ="Test";
+  display.print(_test);
+  display.print("TIME ");
+  // display.print(20);
+  display.print(12);
+  display.print(" ");
+  display.print(3);
+  display.print(" ");
+  display.println(59);
+  // display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 'inverted' text
+  display.print("Totol = ");
+  display.println(total);
+  display.display();
 }
 void EnterReleased() {
 }
