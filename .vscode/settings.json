@@ -33,6 +33,7 @@
         "variant": "cpp",
         "atomic": "cpp",
         "ios": "cpp",
-        "xiosbase": "cpp"
+        "xiosbase": "cpp",
+        "memory": "cpp"
     }
 }

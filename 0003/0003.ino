@@ -5,6 +5,16 @@
 #include <DS3231.h>
 #include <EEPROM.h>
 
+#include <SPI.h>
+#include <SD.h>
+
+
+#define SD_CS 10
+#define SD_MOSI 11
+#define SD_MISO 12
+#define SD_SCK 13
+
+
 DS3231 myRTC;
 bool century = false;
 bool h12Flag;
@@ -35,6 +45,13 @@ TcBUTTON Up(UpPin, UpPressed, UpReleased);
 TcBUTTON Down(DownPin, DownPressed, DownReleased);
 TcBUTTON Enter(EnterPin, EnterPressed, EnterReleased);
 
+// Sensor Power pin 8
+#define SensorPowerPin 8
+void SensorPowerPressed();
+void SensorPowerReleased();
+TcBUTTON SensorPower(SensorPowerPin, SensorPowerPressed, SensorPowerReleased);
+
+
 // Alarm Pin D3
 #define AlarmPin 3
 void AlarmPIsOn(bool);
@@ -47,6 +64,7 @@ TcPINOUT Lcd(LcdPin, LcdPIsOn);
 
 unsigned long lastTime = 0;
 unsigned long lastTime_ms = 0;
+String filename = "Data.csv";
 
 long total = 0;
 long limit = 0;
@@ -73,16 +91,29 @@ uint8_t isBtnSoak = 0;
 uint8_t SleepLcd = 0;
 const uint8_t SleepLcdMax = 30;
 bool isOK = false;
+int isAlarm = 0;
 void setup() {
   Serial.begin(115200);
   Serial.println();
-  Serial.println("I2C scanner. Scanning ...");
-  byte count = 0;
   Wire.begin();
   lcd.begin();
   SleepLcd = SleepLcdMax;
   Lcd.on();
+
+   if (!SD.begin(SD_CS)) {
+    Serial.println("SD card not found");
+    lcd.setCursor(0, 0);
+    lcd.print("SD card not found");
+    while (1);
+  }
   _mainMenuFunc();
+  updateTime();
+  filename = "D"+String(date)+"M"+String(month)+"Y"+String(year)+".csv";
+
+  // Load total
+  total = readLong(0);
+  limit = readLong(20);
+  isAlarm = readLong(30);
 }
 
 void loop() {
@@ -91,6 +122,7 @@ void loop() {
   Down.update();
   Enter.update();
   Sensor.update();
+  SensorPower.update();
   _timer();
   if (myMenu[0] != oldMenu[0] || myMenu[1] != oldMenu[1] || myMenu[2] != oldMenu[2]) {
     _mainMenuFunc();
@@ -99,11 +131,39 @@ void loop() {
     oldMenu[2] = myMenu[2];
   }
 }
+void writeLong(uint32_t address, uint32_t value) {
+  byte byte1 = (value & 0xFF);
+  byte byte2 = ((value >> 8) & 0xFF);
+  byte byte3 = ((value >> 16) & 0xFF);
+  byte byte4 = ((value >> 24) & 0xFF);
 
+  EEPROM.update(address, byte1);
+  EEPROM.update(address + 1, byte2);
+  EEPROM.update(address + 2, byte3);
+  EEPROM.update(address + 3, byte4);
+}
 
+uint32_t readLong(uint32_t address) {
+  uint32_t value = 0;
+  value |= EEPROM.read(address);
+  value |= ((uint32_t)EEPROM.read(address + 1) << 8);
+  value |= ((uint32_t)EEPROM.read(address + 2) << 16);
+  value |= ((uint32_t)EEPROM.read(address + 3) << 24);
+  return value;
+}
+void updateTime() {
+  year = myRTC.getYear();
+  month = myRTC.getMonth(century);
+  date = myRTC.getDate();
+
+  hour = myRTC.getHour(h12Flag, pmFlag);
+  minute = myRTC.getMinute();
+  second = myRTC.getSecond();
+}
 void SensorPressed() {
   total++;
   _mainMenuFunc();
+  saveLog();
 }
 
 void AlarmPIsOn(bool state) {
@@ -589,9 +649,9 @@ void _mainMenuFunc() {
             case 3:
               // 1 4 3
               if (isOK) {
-                writeLong(20, 1);
+                writeLong(30, 1);
               } else {
-                writeLong(20, 0);
+                writeLong(30, 0);
               }
               myMenu[2] = 0;
               break;
@@ -629,26 +689,6 @@ int getMenuCode() {
   return atoi(_menuCode);
 }
 
-void writeLong(int address, long value) {
-  byte byte1 = (value & 0xFF);
-  byte byte2 = ((value >> 8) & 0xFF);
-  byte byte3 = ((value >> 16) & 0xFF);
-  byte byte4 = ((value >> 24) & 0xFF);
-
-  EEPROM.update(address, byte1);
-  EEPROM.update(address + 1, byte2);
-  EEPROM.update(address + 2, byte3);
-  EEPROM.update(address + 3, byte4);
-}
-
-long readLong(int address) {
-  long value = 0;
-  value |= EEPROM.read(address);
-  value |= ((long)EEPROM.read(address + 1) << 8);
-  value |= ((long)EEPROM.read(address + 2) << 16);
-  value |= ((long)EEPROM.read(address + 3) << 24);
-  return value;
-}
 long oldTotal = 0;
 int oldSecond = 0;
 void updateLCD() {
@@ -663,12 +703,7 @@ void updateLCD() {
   lcd.print(limit);
   lcd.setCursor(0, 1);
   // get date from RTC
-  date = myRTC.getDate();
-  month = myRTC.getMonth(century);
-  year = myRTC.getYear();
-  hour = myRTC.getHour(h12Flag, pmFlag);
-  minute = myRTC.getMinute();
-  second = myRTC.getSecond();
+  updateTime();
   oldSecond = second;
   lcd.print(date);
   lcd.print("/");
@@ -692,6 +727,10 @@ void updateLCD(uint8_t index) {
 }
 void _timer() {
   if (millis() - lastTime > 1000) {
+
+    
+
+
     if (isPressSoak) {
       pressSoak++;
     } else {
@@ -708,11 +747,31 @@ void _timer() {
         oldMenu[2] = 0;
       }
     }
-
+  
     if (myMenu[0] == 0 && myMenu[1] == 0 && myMenu[2] == 0) {
+        if(total >= limit){
+      if(isAlarm == 1 && !Alarm.isOn()){
+        Alarm.on(); 
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("ALARM");
+        lcd.setCursor(0, 1);
+        lcd.print("TOTAL= ");
+        lcd.print(total);
+        lcd.print("/");
+        lcd.print(limit);
+      }else{
+        Alarm.off();
+        Serial.print("Alarm= ");
+        Serial.println(isAlarm);
+      }
+    }else{
+      if(Alarm.isOn()){
+        Alarm.off();
+      }
       updateLCD();
     }
-    Serial.println(SleepLcd);
+    }
     lastTime = millis();
   } else if (millis() < 1000) {
     lastTime = millis();
@@ -740,4 +799,90 @@ void _timer() {
         break;
     }
   }
+}
+
+void saveLog(){
+  filename = "Log"+String(year)+String(month)+String(date)+".csv";
+
+  if (!SD.exists(filename)) {
+    File file = SD.open(filename, FILE_WRITE);
+    if (file) {
+      file.println("DateTime,Total,Limit");
+      file.close();
+    }
+  }
+
+  File file = SD.open(filename, FILE_WRITE);
+  if (file) {
+    file.print(date);
+    file.print("/");
+    file.print(month);
+    file.print("/");
+    file.print(year);
+    file.print(" ");
+    file.print(hour);
+    file.print(":");
+    file.print(minute);
+    file.print(":");
+    file.print(second);
+    file.print(",");
+    file.print(total);
+    file.print(",");
+    file.println(limit);
+    file.close();
+  }
+}
+void saveLog(String msg){
+  filename = "Log"+String(year)+String(month)+String(date)+".csv";
+  if (!SD.exists(filename)) {
+    File file = SD.open(filename, FILE_WRITE);
+    if (file) {
+      file.println("DateTime,Total,Limit");
+      file.close();
+    }else{
+      Serial.println("File 1 not found");
+      lcd.clear();
+      lcd.print("File 1 not found");
+      return;
+    }
+  }
+  File file = SD.open(filename, FILE_WRITE);
+  if (file) {
+    file.print(date);
+    file.print("/");
+    file.print(month);
+    file.print("/");
+    file.print(year);
+    file.print(" ");
+    file.print(hour);
+    file.print(":");
+    file.print(minute);
+    file.print(":");
+    file.print(second);
+    file.print(",");
+    file.print(total);
+    file.print(",");
+    file.print(limit);
+    file.print(",");
+    file.println(msg);
+    file.close();
+  }else {
+    Serial.println("File 2 not found");
+    lcd.clear();
+    lcd.print("File 2 not found");
+    return;
+  }
+}
+void SensorPowerPressed()
+{
+
+}
+
+void SensorPowerReleased(){
+  // Save total
+  writeLong(0, total);
+
+  // Save log to SD
+  saveLog("Power off");
+  Serial.println("Power off");
 }
