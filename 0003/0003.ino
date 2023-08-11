@@ -4,7 +4,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <DS3231.h>
 #include <EEPROM.h>
-
+#include <ArduinoJson.h>
 #include <SPI.h>
 #include <SD.h>
 
@@ -17,6 +17,7 @@ DS3231 myRTC;
 bool century = false;
 bool h12Flag;
 bool pmFlag;
+
 LiquidCrystal_I2C lcd(0x3f, 16, 2);
 
 // Sensor Pin D6
@@ -874,6 +875,8 @@ void saveLog(String msg){
     return;
   }
 }
+
+
 void SensorPowerPressed()
 {
 

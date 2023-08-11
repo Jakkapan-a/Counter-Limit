@@ -34,6 +34,8 @@
         "atomic": "cpp",
         "ios": "cpp",
         "xiosbase": "cpp",
-        "memory": "cpp"
+        "memory": "cpp",
+        "random": "cpp",
+        "xlocale": "cpp"
     }
 }
