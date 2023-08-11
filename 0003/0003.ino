@@ -8,12 +8,10 @@
 #include <SPI.h>
 #include <SD.h>
 
-
 #define SD_CS 10
 #define SD_MOSI 11
 #define SD_MISO 12
 #define SD_SCK 13
-
 
 DS3231 myRTC;
 bool century = false;
@@ -24,7 +22,8 @@ LiquidCrystal_I2C lcd(0x3f, 16, 2);
 // Sensor Pin D6
 #define SensorPin 6
 void SensorPressed(void);
-TcBUTTON Sensor(SensorPin, SensorPressed, NULL);
+void SensorReleased(void);
+TcBUTTON Sensor(SensorPin, SensorPressed, SensorReleased);
 
 // Button esc, up, down, enter = A0 A1 A2 A3
 #define EscPin A0
@@ -161,11 +160,13 @@ void updateTime() {
   second = myRTC.getSecond();
 }
 void SensorPressed() {
+
+}
+void SensorReleased(){
   total++;
   _mainMenuFunc();
   saveLog();
 }
-
 void AlarmPIsOn(bool state) {
   Serial.print("Alarm is ");
   Serial.println(state ? "On" : "Off");
