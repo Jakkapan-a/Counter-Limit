@@ -729,10 +729,6 @@ void updateLCD(uint8_t index) {
 }
 void _timer() {
   if (millis() - lastTime > 1000) {
-
-    
-
-
     if (isPressSoak) {
       pressSoak++;
     } else {

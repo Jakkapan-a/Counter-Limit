@@ -4,7 +4,7 @@
 #include <LiquidCrystal_I2C.h>
 // #include <DS3231.h>
 #include <DS1302.h>
-#include <ArduinoJson.h>
+
 #include <EEPROM.h>
 
 #include <SPI.h>
@@ -70,7 +70,9 @@ enum Setings
     TIME,
     DATE,
     RANGE,
-    BUZZER
+    BUZZER,
+    MAX,
+    MIN
 };
 
 Setings setings = TIME;
@@ -129,15 +131,146 @@ enum BUTTON_STATE
 int countMenu = 0;
 int countSubMenu = 0;
 // --------------------- Class --------------------- //
-class DataTypeProgram
-{
+class DataTypeProgram {
 public:
-    int Lots;
-    int LotSize;
-    bool IsBuzzer;
-    float MinResistance;
-    float MaxResistance;
+  int Lots;
+  int LotSize;
+  uint8_t IsBuzzer;
+  float MinResistance;
+  float MaxResistance;
+
+  DataTypeProgram() {
+    // Default values
+    Lots = 0;
+    LotSize = 0;
+    IsBuzzer = false;
+    MinResistance = 9000;
+    MaxResistance = 10000;
+  }
+
+  void readFromSD() {
+    File dataFile = SD.open("settings.txt", FILE_READ);
+    if (dataFile) {
+      while (dataFile.available()) {
+        String line = dataFile.readStringUntil('\n');
+        Serial.println(line);
+        int separatorIndex = line.indexOf('=');
+        String key = line.substring(0, separatorIndex);
+        String value = line.substring(separatorIndex + 1);
+        assignValue(key, value);
+      }
+      dataFile.close();
+    } else {
+      dataFile.close();
+      // If file doesn't exist, create a new one with default values
+      writeToSD();
+    }
+  }
+
+  void writeToSD() {
+    File dataFile = SD.open("settings.txt", FILE_WRITE);
+    if (dataFile) {
+      dataFile.println("Lots=" + String(Lots));
+      dataFile.println("LotSize=" + String(LotSize));
+      dataFile.println("IsBuzzer=" + String(IsBuzzer));
+      dataFile.println("MinResistance=" + String(MinResistance, 2));  // with 2 decimal places
+      dataFile.println("MaxResistance=" + String(MaxResistance, 2));
+      dataFile.close();
+    }
+  }
+
+  void updateValue(String key, String value) {
+    assignValue(key, value);
+    writeToSD();
+  }
+
+private:
+  void assignValue(String key, String value) {
+    if (key == "Lots") {
+      Lots = value.toInt();
+    } else if (key == "LotSize") {
+      LotSize = value.toInt();
+    } else if (key == "IsBuzzer") {
+      IsBuzzer = value == "true";
+    } else if (key == "MinResistance") {
+      MinResistance = value.toFloat();
+    } else if (key == "MaxResistance") {
+      MaxResistance = value.toFloat();
+    }
+  }
 };
+// ------------------------ Class 2 ----------------
+class HistoryData {
+public:
+
+  float Resistance;
+  float MinResistance;
+  float MaxResistance;
+  String DateTime;
+
+  // Default Constructor
+  HistoryData() {
+    // You can initialize your values here if needed
+  }
+
+  // Overloaded Constructor for easier object creation
+  HistoryData(float r, float minR, float maxR, String dateTime) 
+    : Resistance(r), MinResistance(minR), MaxResistance(maxR), DateTime(dateTime) {}
+
+  void readFromSD(String date) {
+    String fileName = date; 
+    File dataFile = SD.open(fileName + ".csv", FILE_READ);
+    
+    if (dataFile) {
+      while (dataFile.available()) {
+        // Here you can read and parse CSV lines, but remember it might be easier to do this outside the class 
+      }
+      dataFile.close();
+    } else {
+      dataFile.close();
+      // If the file doesn't exist and you want to create it, call writeToSD() here
+      // But consider what data you're going to write if you haven't read anything
+    }
+  }
+
+  void writeToSD(String date) {
+    String fileName = date;
+    File dataFile = SD.open(fileName + ".csv", FILE_WRITE);
+    if (dataFile) {
+      // Write the CSV header if the file is new (size is 0)
+      if(dataFile.size() == 0) {
+        dataFile.println("DateTime,Resistance,MinResistance,MaxResistance");
+      }
+      // Append new data
+      dataFile.println(DateTime + "," + String(Resistance) + "," + String(MinResistance) + "," + String(MaxResistance));
+      dataFile.close();
+    }
+  }
+
+  // This function might not be needed for this class, but I'll leave it in just in case
+  void updateValue(String key, String value) {
+    assignValue(key, value);
+    // As per your structure, after updating a value, you're writing to SD
+    // This might not be the best approach for CSV since each entry is a new measurement
+    // So consider if you really want this behavior
+    writeToSD(DateTime.substring(0, 10));  // Assuming your DateTime format is 'YYYY-MM-DD HH:MM:SS'
+  }
+
+private:
+  void assignValue(String key, String value) {
+    // Update the object's properties based on key-value pairs
+    if (key == "DateTime") {
+      DateTime = value;
+    } else if (key == "Resistance") {
+      Resistance = value.toFloat();
+    } else if (key == "MinResistance") {
+      MinResistance = value.toFloat();
+    } else if (key == "MaxResistance") {
+      MaxResistance = value.toFloat();
+    }
+  }
+};
+
 // -------------------- Variable -------------------- //
 DataTypeProgram dataProgram;
 // -------------------- Function -------------------- //
@@ -159,18 +292,10 @@ void setup()
         while (1)
             ;
     }
-    DisplayHome();
-    if (!SD.exists("data.json"))
-    {
-        Serial.println("data.json does not exist. Creating...");
-        writeJsonToSDCreate();
-    }
-    else
-    {
-        Serial.println("data.json exists.");
-    }
-    readJsonFromSD();
-    IsBuzzer = readLong(20);
+    //DisplayHome();
+    // IsBuzzer = readLong(20);
+    dataProgram.IsBuzzer = readLong(20);
+    dataProgram.readFromSD();
 }
 Time t;
 void loop()
@@ -197,94 +322,7 @@ void loop()
         UpdateLCD();
     }
 }
-void writeJsonToSDCreate()
-{
-    File dataFile = SD.open("data.json", FILE_WRITE);
 
-    DynamicJsonDocument doc(1024);
-    doc["Lots"] = 0;
-    doc["LotSize"] = 0;
-    doc["IsBuzzer"] = false;
-    doc["MinResistance"] = 9000;
-    doc["MaxResistance"] = 10000;
-
-    if (dataFile)
-    {
-        serializeJson(doc, dataFile);
-        dataFile.close();
-        Serial.println("JSON data written to SD card.");
-    }
-    else
-    {
-        Serial.println("Error opening data.json for writing.");
-    }
-}
-
-void readJsonFromSD()
-{
-    File dataFile = SD.open("data.json", FILE_READ);
-    if (dataFile)
-    {
-        DynamicJsonDocument doc(1024);
-         DeserializationError error = deserializeJson(doc, dataFile);
-        if (error) {
-            Serial.println("Failed to read file, using default configuration");
-        }
-
-        dataProgram.Lots = doc["Lots"];
-        dataProgram.LotSize = doc["LotSize"];
-        dataProgram.IsBuzzer = doc["IsBuzzer"];
-        dataProgram.MinResistance = doc["MinResistance"];
-        dataProgram.MaxResistance = doc["MaxResistance"];
-
-        Serial.println("JSON data read from SD card.");
-        Serial.print("Lots: ");
-        Serial.println(dataProgram.Lots);
-        Serial.print("LotSize: ");
-        Serial.println(dataProgram.LotSize);
-        Serial.print("IsBuzzer: ");
-        Serial.println(dataProgram.IsBuzzer);
-        Serial.print("MinResistance: ");
-        Serial.println(dataProgram.MinResistance);
-        Serial.print("MaxResistance: ");
-        Serial.println(dataProgram.MaxResistance);
-        dataFile.close();
-    }else{
-        Serial.println("Error opening data.json for reading.");
-    }
-}
-void updateJsonData()
-{
-    File dataFile = SD.open("data.json", FILE_READ);
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, dataFile);
-    dataFile.close();
-    if (error)
-    {
-        Serial.println("Failed to read file");
-        return;
-    }
-    // Modify the contents in memory
-    doc["Lots"] = dataProgram.Lots;
-    doc["LotSize"] = dataProgram.LotSize;
-    doc["IsBuzzer"] = dataProgram.IsBuzzer;
-    doc["MinResistance"] = dataProgram.MinResistance;
-    doc["MaxResistance"] = dataProgram.MaxResistance;
-
-    // Reopen the file for writing
-    dataFile = SD.open("data.json", FILE_WRITE);
-    if (!dataFile)
-    {
-        Serial.println("Failed to open file for writing");
-        return;
-    }
-
-    // Serialize JSON to file
-    serializeJson(doc, dataFile);
-    dataFile.close();
-    Serial.println("JSON data written to SD card.");
-
-}
 void UpdateLCD()
 {
 
@@ -382,7 +420,6 @@ bool IsRangeReset = false;
 
 String CalculateResistor(float input)
 {
-
     if (IsRange(input, minResistance, maxResistance))
     {
 
@@ -612,7 +649,7 @@ void DisplayDate()
         break;
     }
 }
-bool IsBuzzerSelect = false;
+uint8_t IsBuzzerSelect = false;
 void DisplayRange()
 {
     switch (pages)
@@ -628,14 +665,14 @@ void DisplayRange()
         lcd.print(">ON");
         lcd.setCursor(0, 1);
         lcd.print(" OFF");
-        IsBuzzerSelect = false;
+        IsBuzzerSelect = 1;
         break;
     case OFF:
         lcd.setCursor(0, 0);
         lcd.print(" ON");
         lcd.setCursor(0, 1);
         lcd.print(">OFF");
-        IsBuzzerSelect = true;
+        IsBuzzerSelect = 0;
         break;
     case Save:
         lcd.setCursor(0, 0);
@@ -643,7 +680,7 @@ void DisplayRange()
         pages = Index;
         // IsBuzzer = select;
         dataProgram.IsBuzzer = IsBuzzerSelect;
-        writeLong(20, IsBuzzer);
+        writeLong(20, dataProgram.IsBuzzer);
         delay(1000);
         IsChangeMenu = true;
         break;
@@ -654,7 +691,7 @@ void DisplayRange()
 
 String GetBuzzer()
 {
-    if (IsBuzzer)
+    if (dataProgram.IsBuzzer == 1)
     {
         return "ON";
     }
@@ -697,6 +734,7 @@ void ButtonDownPressed(void)
 
 void ButtonDownReleased(void)
 {
+
 }
 
 // -------------------- FUNCTION -------------------- //
@@ -722,6 +760,7 @@ void BUTTON_PUSHES(BUTTON_STATE button)
                 display = Home;
             }
         }
+        lcd.clear();
         break;
     case ENTER:
 
@@ -790,7 +829,7 @@ void BUTTON_PUSHES(BUTTON_STATE button)
             case RANGE:
                 if (pages == Index)
                 {
-                    if (dataProgram.IsBuzzer)
+                    if (dataProgram.IsBuzzer == 1)
                     {
                         pages = ON;
                     }
