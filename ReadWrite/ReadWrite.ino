@@ -12,76 +12,27 @@
 
 #include <SPI.h>
 #include <SD.h>
+#include <TcBUTTON.h>
+#include <TcPINOUT.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <DS1302.h>
+#include <EEPROM.h>
+
+#include "DataTypeProgram.h"
+
+#define SD_CS 10
+#define SD_MOSI 11
+#define SD_MISO 12
+#define SD_SCK 13
+
+#define BUTTON_ESC_PIN 4
+#define BUTTON_UP_PIN 6
+#define BUTTON_DOWN_PIN 7
+#define BUTTON_ENTER_PIN 5
+#define BUZZER_PIN 9
+
 // --------------------- Class --------------------- //
-class DataTypeProgram {
-public:
-  int Lots;
-  int LotSize;
-  bool IsBuzzer;
-  float MinResistance;
-  float MaxResistance;
-
-  DataTypeProgram() {
-    // Default values
-    Lots = 0;
-    LotSize = 0;
-    IsBuzzer = false;
-    MinResistance = 9000;
-    MaxResistance = 10000;
-  }
-
-  void readFromSD() {
-    File dataFile = SD.open("settings.txt", FILE_READ);
-    if (dataFile) {
-      while (dataFile.available()) {
-        String line = dataFile.readStringUntil('\n');
-        Serial.println(line);
-        int separatorIndex = line.indexOf('=');
-        String key = line.substring(0, separatorIndex);
-        String value = line.substring(separatorIndex + 1);
-        assignValue(key, value);
-      }
-      dataFile.close();
-    } else {
-      dataFile.close();
-      // If file doesn't exist, create a new one with default values
-      writeToSD();
-    }
-  }
-
-  void writeToSD() {
-    File dataFile = SD.open("settings.txt", FILE_WRITE);
-    if (dataFile) {
-      dataFile.println("Lots=" + String(Lots));
-      dataFile.println("LotSize=" + String(LotSize));
-      dataFile.println("IsBuzzer=" + String(IsBuzzer));
-      dataFile.println("MinResistance=" + String(MinResistance, 2));  // with 2 decimal places
-      dataFile.println("MaxResistance=" + String(MaxResistance, 2));
-      dataFile.close();
-    }
-  }
-
-  void updateValue(String key, String value) {
-    assignValue(key, value);
-    writeToSD();
-  }
-
-private:
-  void assignValue(String key, String value) {
-    if (key == "Lots") {
-      Lots = value.toInt();
-    } else if (key == "LotSize") {
-      LotSize = value.toInt();
-    } else if (key == "IsBuzzer") {
-      IsBuzzer = value == "true";
-    } else if (key == "MinResistance") {
-      MinResistance = value.toFloat();
-    } else if (key == "MaxResistance") {
-      MaxResistance = value.toFloat();
-    }
-  }
-};
-// -------------------- Variable -------------------- //
 DataTypeProgram dataProgram;
 void setup() {
   // Open serial communications and wait for port to open:
@@ -102,7 +53,7 @@ void setup() {
    dataProgram.readFromSD();
 
   // Example of updating a value
-  // dataProgram.updateValue("Lots", "15");
+  dataProgram.updateValue("Lots", "15");
 
   Serial.println("Lots: " + String(dataProgram.Lots));
 
