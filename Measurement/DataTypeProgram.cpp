@@ -59,7 +59,7 @@ void DataTypeProgram::writeHistoryToSD() {
   if (dataFile) {
     // Write the CSV header if the file is new (size is 0)
     if (dataFile.size() == 0) {
-      dataFile.println("Measure(Ohm),Min(Ohm),Max(Ohm),Lots,Date,Time");
+      dataFile.println("Measure(Ohm),Min(Ohm),Max(Ohm),Count,Date,Time");
     }
 
     // Append new data

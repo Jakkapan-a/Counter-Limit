@@ -6,13 +6,12 @@
 #include <LiquidCrystal_I2C.h>
 #include <DS1302.h>
 #include <EEPROM.h>
-
 #include "DataTypeProgram.h"
-// #include "HistoryData.h"
-#define SD_CS 10
-#define SD_MOSI 11
-#define SD_MISO 12
-#define SD_SCK 13
+
+#define SD_CS 10    // | Mega 2560
+#define SD_MOSI 11  // | COPI 51
+#define SD_MISO 12  // | CIPO 50
+#define SD_SCK 13   // |  CSK 52
 
 #define BUTTON_ESC_PIN 4
 #define BUTTON_UP_PIN 6
@@ -171,12 +170,21 @@ void setup() {
   // dataProgram.updateValue("Lots", "15");
   // dataProgram.MinResistance = readLong(0);
   // dataProgram.MaxResistance = readLong(4);
-  dataProgram.IsBuzzer = readLong(20);
+  // dataProgram.IsBuzzer = readLong(20);
   // Update DATE
   UpdateDateTime();
   // Set DATE TO FILENAME
   dataProgram.FileName = "h" + String(year) + String(month) + String(day);
   Serial.println("done.");
+  lcd.clear();
+  String strartTXT = "Loading.";
+  for(int i =0; i<6;i++){
+    lcd.setCursor(0, 0);
+    strartTXT += ".";
+    lcd.print(strartTXT);
+    delay(200);
+  }
+ lcd.clear();
 }
 
 void loop() {
@@ -300,7 +308,7 @@ void DisplayHome() {
     }
     digitResistor = GetDigit(R2);
 
-    if (R2 < 600000) {
+    if (R2 < 500000) {
       lcd.setCursor(0, 0);
       lcd.print("R: ");
       lcd.print(GetUnit(R2));
@@ -360,17 +368,17 @@ String CalculateResistor(float input) {
     IsRangeReset = true;
   }
 
-  if (input > 600000) {
+  if (input > 500000) {
     // OFF LED ALL
     ledMes.off();
     ledGreen.off();
     ledRed.off();
-    return "Out";
+    return "OUT";
   }
   ledMes.off();
   ledGreen.off();
   ledRed.on();
-  return "Out";
+  return "NG";
 }
 
 bool IsRange(float input, float min, float max) {
@@ -591,7 +599,7 @@ void DisplayRange() {
       lcd.setCursor(0, 0);
       lcd.print(">BUZZER : " + GetBuzzer());
       lcd.setCursor(0, 1);
-      lcd.print(" Lots :" + String(dataProgram.Lots) + "/" + String(dataProgram.LotSize));
+      lcd.print(" ACC :" + String(dataProgram.Lots) + "/" + String(dataProgram.LotSize));
       break;
     case ON:
       lcd.setCursor(0, 0);
@@ -629,7 +637,7 @@ void DisplayLots() {
       lcd.setCursor(0, 0);
       lcd.print(" BUZZER : " + GetBuzzer());
       lcd.setCursor(0, 1);
-      lcd.print(">Lots :" + String(dataProgram.Lots) + "/" + String(dataProgram.LotSize));
+      lcd.print(">ACC :" + String(dataProgram.Lots) + "/" + String(dataProgram.LotSize));
       break;
     case No:
       lcd.setCursor(0, 0);
@@ -670,7 +678,7 @@ void DisplayLotSize() {
     case Index:
       _min = dataProgram.MinResistance;
       lcd.setCursor(0, 0);
-      lcd.print(">LotSize : " + String(dataProgram.LotSize));
+      lcd.print(">Count : " + String(dataProgram.LotSize));
       lcd.setCursor(0, 1);
       _lotSize = dataProgram.LotSize;
       lcd.print(" MIN :" + String(_min) + " Ohm");
@@ -698,7 +706,7 @@ void DisplayMin() {
   switch (pages) {
     case Index:
       lcd.setCursor(0, 0);
-      lcd.print(" LotSize : " + String(dataProgram.LotSize));
+      lcd.print(" Count : " + String(dataProgram.LotSize));
       lcd.setCursor(0, 1);
       _min = dataProgram.MinResistance;
       lcd.print(">MIN :" + String(_min) + " Ohm");
