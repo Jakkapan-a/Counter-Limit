@@ -18,6 +18,7 @@ public:
   String Measurement;
   String Min;
   String Max;
+  String HLots;
   String Date;
   String Time;
 

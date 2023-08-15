@@ -19,7 +19,7 @@ void DataTypeProgram::readFromSD() {
 
 void DataTypeProgram::writeToSD() {
   // First, remove the old file
-  // SD.remove("settings.txt");
+  SD.remove("settings.txt");
 
   File dataFile = SD.open("settings.txt", FILE_WRITE);
   if (dataFile) {
@@ -59,11 +59,11 @@ void DataTypeProgram::writeHistoryToSD() {
   if (dataFile) {
     // Write the CSV header if the file is new (size is 0)
     if (dataFile.size() == 0) {
-      dataFile.println("Measure(Ohm),Min(Ohm),Max(Ohm),Date,Time");
+      dataFile.println("Measure(Ohm),Min(Ohm),Max(Ohm),Lots,Date,Time");
     }
 
     // Append new data
-    dataFile.println(Measurement + "," + Min + "," + Max + "," + Date + "," + Time);
+    dataFile.println(Measurement + "," + Min + "," + Max + ","+HLots+"," + Date + "," + Time);
 
     // Close the file
     dataFile.close();

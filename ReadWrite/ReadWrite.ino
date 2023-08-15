@@ -104,8 +104,10 @@ enum Setings {
   DATE,
   RANGE,
   BUZZER,
+  Lots,
+  LotSize,
   MAX,
-  MIN
+  MIN,
 };
 
 Setings setings = TIME;
@@ -161,13 +163,14 @@ void setup() {
     while (1)
       ;
   }
-
-  //dataProgram.readFromSD();
+  // writeLong(0,9000);
+  // writeLong(4,10000);
+  dataProgram.readFromSD();
   // delay(2000);
   // Example of updating a value
   // dataProgram.updateValue("Lots", "15");
-  dataProgram.MinResistance = readLong(0);
-  dataProgram.MaxResistance = readLong(4);
+  // dataProgram.MinResistance = readLong(0);
+  // dataProgram.MaxResistance = readLong(4);
   dataProgram.IsBuzzer = readLong(20);
   // Update DATE
   UpdateDateTime();
@@ -190,7 +193,7 @@ void loop() {
 
   if (display != oldDisplay || setings != oldSetings || pages != oldPages || IsChangeMenu) {
     lcd.noBlink();
-    //Serial.println("UpdateLCD");
+    // Serial.println("UpdateLCD");
     oldDisplay = display;
     oldSetings = setings;
     oldPages = pages;
@@ -199,17 +202,19 @@ void loop() {
   }
 
   if (millis() - lastTimeMain >= 1000) {
-
+    // BTN Sleep
     if (display == Settings) {
       countUseMenu++;
       if (countUseMenu >= 30) {
+        lcd.clear();
         display = Home;
         setings = TIME;
         countUseMenu = 0;
       }
+
       if (IsPress) {
         countPress++;
-        Serial.println("countPress: " + String(countPress));
+        // Serial.println("countPress: " + String(countPress));
       } else {
         countPress = 0;
       }
@@ -325,16 +330,19 @@ String CalculateResistor(float input) {
   if (IsRange(input, dataProgram.MinResistance, dataProgram.MaxResistance)) {
     if (IsRangeReset == true) {
       if (dataProgram.IsBuzzer) {
-        // UpdateDateTime();
+        //
+        UpdateDateTime();
+        // Update Lots
+        dataProgram.Lots++;
+        dataProgram.writeToSD();
 
-        // dataProgram.Measurement = String(R2);
-        // dataProgram.Min = String(dataProgram.MinResistance);
-        // dataProgram.Max = String(dataProgram.MinResistance);
-        // dataProgram.Date = String(day)+"/"+String(month)+"/"+String(year);
-        // dataProgram.Time =  String(hour)+":"+String(minute)+":"+String(second);
-        // dataProgram.writeHistoryToSD();
-
-
+        dataProgram.Measurement = String(R2);
+        dataProgram.Min = String(dataProgram.MinResistance);
+        dataProgram.Max = String(dataProgram.MinResistance);
+        dataProgram.Date = String(day) + "/" + String(month) + "/" + String(year);
+        dataProgram.Time = String(hour) + "/" + String(minute) + "/" + String(second);
+        dataProgram.HLots = String(dataProgram.Lots) + "/" + String(dataProgram.LotSize);
+        dataProgram.writeHistoryToSD();
         tone(BUZZER_PIN, 600, 100);
         delay(200);
         tone(BUZZER_PIN, 600, 100);
@@ -406,6 +414,12 @@ void DisplaySettings() {
       break;
     case RANGE:
       DisplayRange();
+      break;
+    case Setings::Lots:
+      DisplayLots();
+      break;
+    case Setings::LotSize:
+      DisplayLotSize();
       break;
     case MIN:
       DisplayMin();
@@ -569,15 +583,15 @@ void DisplayDate() {
   }
 }
 uint8_t IsBuzzerSelect = false;
-int _min = 0;
+
 void DisplayRange() {
   switch (pages) {
     case Index:
-      _min = dataProgram.MinResistance;
+      // _min = dataProgram.MinResistance;
       lcd.setCursor(0, 0);
       lcd.print(">BUZZER : " + GetBuzzer());
       lcd.setCursor(0, 1);
-      lcd.print(" MIN :" + String(_min)+"Ohm");
+      lcd.print(" Lots :" + String(dataProgram.Lots) + "/" + String(dataProgram.LotSize));
       break;
     case ON:
       lcd.setCursor(0, 0);
@@ -599,7 +613,8 @@ void DisplayRange() {
       pages = Index;
       // IsBuzzer = select;
       dataProgram.IsBuzzer = IsBuzzerSelect;
-      writeLong(20, dataProgram.IsBuzzer);
+      dataProgram.writeToSD();
+      // writeLong(20, dataProgram.IsBuzzer);
       delay(1000);
       IsChangeMenu = true;
       break;
@@ -607,15 +622,86 @@ void DisplayRange() {
       break;
   }
 }
-
-void DisplayMin() {
+bool IsReset = false;
+void DisplayLots() {
   switch (pages) {
     case Index:
       lcd.setCursor(0, 0);
       lcd.print(" BUZZER : " + GetBuzzer());
       lcd.setCursor(0, 1);
+      lcd.print(">Lots :" + String(dataProgram.Lots) + "/" + String(dataProgram.LotSize));
+      break;
+    case No:
+      lcd.setCursor(0, 0);
+      lcd.print("RESET :");
+      lcd.setCursor(0, 1);
+      lcd.cursor();
+      lcd.blink();
+      lcd.print(">NO  YES");
+      IsReset = false;
+      break;
+    case Yes:
+      lcd.setCursor(0, 0);
+      lcd.print("RESET :");
+      lcd.setCursor(0, 1);
+      lcd.cursor();
+      lcd.blink();
+      lcd.print(" NO >YES");
+      IsReset = true;
+      break;
+    case Save:
+      lcd.setCursor(0, 0);
+      lcd.print("Saving...");
+      pages = Index;
+      // IsBuzzer = select;
+      if (IsReset) {
+        dataProgram.Lots = 0;
+        dataProgram.writeToSD();
+      }
+      delay(1000);
+      IsChangeMenu = true;
+      break;
+  }
+}
+int _lotSize = 0;
+int _min = 0;
+void DisplayLotSize() {
+  switch (pages) {
+    case Index:
       _min = dataProgram.MinResistance;
-      lcd.print(">MIN :" + String(_min)+"Ohm");
+      lcd.setCursor(0, 0);
+      lcd.print(">LotSize : " + String(dataProgram.LotSize));
+      lcd.setCursor(0, 1);
+      _lotSize = dataProgram.LotSize;
+      lcd.print(" MIN :" + String(_min) + " Ohm");
+      break;
+    case Set:
+      lcd.setCursor(0, 0);
+      lcd.print("SET LOT SIZE :");
+      lcd.setCursor(0, 1);
+      lcd.cursor();
+      lcd.blink();
+      lcd.print(_lotSize);
+      break;
+    case Save:
+      lcd.setCursor(0, 0);
+      lcd.print("Saving...");
+      pages = Index;
+      dataProgram.LotSize = _lotSize;
+      dataProgram.writeToSD();
+      delay(1000);
+      IsChangeMenu = true;
+      break;
+  }
+}
+void DisplayMin() {
+  switch (pages) {
+    case Index:
+      lcd.setCursor(0, 0);
+      lcd.print(" LotSize : " + String(dataProgram.LotSize));
+      lcd.setCursor(0, 1);
+      _min = dataProgram.MinResistance;
+      lcd.print(">MIN :" + String(_min) + " Ohm");
       break;
     case Set:
       lcd.setCursor(0, 0);
@@ -631,7 +717,8 @@ void DisplayMin() {
       pages = Index;
       // IsBuzzer = select;
       dataProgram.MinResistance = _min;
-      writeLong(0, dataProgram.MinResistance);
+      // writeLong(0, dataProgram.MinResistance);
+      dataProgram.writeToSD();
       delay(1000);
       IsChangeMenu = true;
       break;
@@ -644,7 +731,7 @@ void DisplayMax() {
     case Index:
       _max = dataProgram.MaxResistance;
       lcd.setCursor(0, 0);
-      lcd.print(">MAX :" + String(_max)+"Ohm");
+      lcd.print(">MAX :" + String(_max) + " Ohm");
       lcd.setCursor(0, 1);
       lcd.print(" ");
       break;
@@ -662,7 +749,8 @@ void DisplayMax() {
       pages = Index;
       // IsBuzzer = select;
       dataProgram.MaxResistance = _max;
-      writeLong(4, dataProgram.MaxResistance);
+      // writeLong(4, dataProgram.MaxResistance);
+      dataProgram.writeToSD();
       delay(1000);
       IsChangeMenu = true;
       break;
@@ -681,7 +769,7 @@ void ButtonEscPressed(void) {
   currentButtonState = BUTTON_STATE::ESC;
   IsPress = true;
   countPress = 0;
- // Serial.println("ButtonEscPressed: ");
+  // Serial.println("ButtonEscPressed: ");
 }
 
 void ButtonEscReleased(void) {
@@ -792,7 +880,24 @@ void BUTTON_PUSHES(BUTTON_STATE button) {
               pages = Index;
             }
             break;
-
+          case Lots:
+            if (pages == Index) {
+              pages = No;
+            } else if (pages == No || pages == Yes) {
+              pages = Save;
+            } else if (pages == Save) {
+              pages = Index;
+            }
+            break;
+          case LotSize:
+            if (pages == Index) {
+              pages = Set;
+            } else if (pages == Set) {
+              pages = Save;
+            } else if (pages == Save) {
+              pages = Index;
+            }
+            break;
           case MIN:
             if (pages == Index) {
               pages = Set;
@@ -817,23 +922,29 @@ void BUTTON_PUSHES(BUTTON_STATE button) {
       }
       break;
     case UP:
-
       if (pages == Index) {
         switch (setings) {
           case TIME:
-            setings = MAX;
+            setings = Setings::MAX;
             break;
           case DATE:
-            setings = TIME;
+            setings = Setings::TIME;
             break;
           case RANGE:
-            setings = DATE;
+            setings = Setings::DATE;
+            break;
+          case Setings::Lots:
+            setings = Setings::RANGE;
+            Serial.println("Setings::Lots->Setings::RANGE");
+            break;
+          case Setings::LotSize:
+            setings = Setings::Lots;
             break;
           case MIN:
-            setings = RANGE;
+            setings = Setings::LotSize;
             break;
           case MAX:
-            setings = MIN;
+            setings = Setings::MIN;
             break;
           default:
             break;
@@ -906,6 +1017,27 @@ void BUTTON_PUSHES(BUTTON_STATE button) {
                 break;
             }
             break;
+          case Lots:
+            switch (pages) {
+              case No:
+                pages = Yes;
+                break;
+              case Yes:
+                pages = No;
+                break;
+              default:
+                break;
+            }
+            break;
+          case LotSize:
+            switch (pages) {
+              case Set:
+                _lotSize++;
+                break;
+              default:
+                break;
+            }
+            break;
           case MIN:
             switch (pages) {
               case Set:
@@ -942,6 +1074,12 @@ void BUTTON_PUSHES(BUTTON_STATE button) {
             setings = RANGE;
             break;
           case RANGE:
+            setings = Setings::Lots;
+            break;
+          case Setings::Lots:
+            setings = Setings::LotSize;
+            break;
+          case Setings::LotSize:
             setings = MIN;
             break;
           case MIN:
@@ -1016,6 +1154,30 @@ void BUTTON_PUSHES(BUTTON_STATE button) {
                 break;
               case OFF:
                 pages = ON;
+                break;
+              default:
+                break;
+            }
+            break;
+          case Lots:
+            switch (pages) {
+              case No:
+                pages = Yes;
+                break;
+              case Yes:
+                pages = No;
+                break;
+              default:
+                break;
+            }
+            break;
+          case LotSize:
+            switch (pages) {
+              case Set:
+                _lotSize--;
+                if (_lotSize < 0) {
+                  _lotSize = 0;
+                }
                 break;
               default:
                 break;
