@@ -14,11 +14,18 @@ public:
   float MinResistance;
   float MaxResistance;
 
+  String FileName;
+  String Measurement;
+  String Min;
+  String Max;
+  String Date;
+  String Time;
+
   DataTypeProgram() {
     // Default values
     Lots = 0;
     LotSize = 0;
-    IsBuzzer = 0;
+    IsBuzzer = 1;
     MinResistance = 9000;
     MaxResistance = 10000;
   }
@@ -28,6 +35,8 @@ public:
   void writeToSD();
 
   void updateValue(String key, String value);
+
+  void writeHistoryToSD();
 
 private:
   void assignValue(String key, String value);

@@ -1,244 +1,5 @@
-#include <SPI.h>
-#include <SD.h>
-#include <TcBUTTON.h>
-#include <TcPINOUT.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-#include <DS1302.h>
-#include <EEPROM.h>
 
-#include "DataTypeProgram.h"
-// #include "HistoryData.h"
-#define SD_CS 10
-#define SD_MOSI 11
-#define SD_MISO 12
-#define SD_SCK 13
-
-#define BUTTON_ESC_PIN 4
-#define BUTTON_UP_PIN 6
-#define BUTTON_DOWN_PIN 7
-#define BUTTON_ENTER_PIN 5
-#define BUZZER_PIN 9
-
-void ButtonEscPressed(void);
-void ButtonEscReleased(void);
-TcBUTTON buttonEsc(BUTTON_ESC_PIN, ButtonEscPressed, ButtonEscReleased);
-
-void ButtonEnterPressed(void);
-void ButtonEnterReleased(void);
-TcBUTTON buttonEnter(BUTTON_ENTER_PIN, ButtonEnterPressed, ButtonEnterReleased);
-
-void ButtonUpPressed(void);
-void ButtonUpReleased(void);
-TcBUTTON buttonUp(BUTTON_UP_PIN, ButtonUpPressed, ButtonUpReleased);
-
-void ButtonDownPressed(void);
-void ButtonDownReleased(void);
-TcBUTTON buttonDown(BUTTON_DOWN_PIN, ButtonDownPressed, ButtonDownReleased);
-
-#define LED_MES_PIN A1
-TcPINOUT ledMes(LED_MES_PIN);
-
-#define LED_GREEN_PIN A2
-TcPINOUT ledGreen(LED_GREEN_PIN);
-
-#define LED_RED_PIN A3
-TcPINOUT ledRed(LED_RED_PIN);
-
-DS1302 rtc(2, 3, 8);
-
-#define LCD_ADDRESS 0x27
-LiquidCrystal_I2C lcd(LCD_ADDRESS, 16, 2);
-
-const int Vin = 5;      // voltage at 5V pin of arduino
-float Volt = 0;         // voltage at A0 pin of arduino
-const float R1 = 3300;  // value of known resistance
-float R2 = 0;           // value of unknown resistance
-float oldR2 = 0;        // value of unknown resistance
-int a2d_data = 0;
-float buffer = 0;
-
-enum BUTTON_STATE {
-  ESC,
-  ENTER,
-  UP,
-  DOWN,
-  NONE
-};
-BUTTON_STATE currentButtonState = BUTTON_STATE::NONE;
-bool IsPress = false;
-int countPress = 0;
-
-bool IsChangeMenu = false;
-
-uint8_t day, month, hour, minute, second;
-uint16_t year = 2021;
-// max min value for time
-uint8_t maxHour = 23;
-uint8_t minHour = 0;
-uint8_t maxMinute = 59;
-uint8_t minMinute = 0;
-uint8_t maxSecond = 59;
-uint8_t minSecond = 0;
-// max min value for date
-const uint8_t maxDay = 31;
-const uint8_t minDay = 1;
-const uint8_t maxMonth = 12;
-const uint8_t minMonth = 1;
-const uint16_t maxYear = 2050;
-const uint16_t minYear = 2021;
-
-unsigned long lastTimeDisplay = 0;
-unsigned long lastTimeMain = 0;
-unsigned long lastTimeBtnPress = 0;
-enum Display {
-  Home,
-  Settings,
-};
-
-Display display = Home;
-Display oldDisplay = Settings;
-
-enum Setings {
-  TIME,
-  DATE,
-  RANGE,
-  BUZZER,
-  MAX,
-  MIN
-};
-
-Setings setings = TIME;
-Setings oldSetings = TIME;
-
-enum Pages {
-  Index,
-  Get,
-  Show,
-  Hour,
-  Minute,
-  Second,
-  Day,
-  Month,
-  Year,
-  Save,
-  None,
-  Yes,
-  No,
-  ON,
-  OFF,
-  Set
-};
-Pages pages = Hour;
-Pages oldPages = Hour;
-
-DataTypeProgram dataProgram;
-// HistoryData history;
-
-Time t;
-int countUseMenu = 0;
-
-// --------------------- SETUP --------------------- //
-void setup() {
-  // Open serial communications and wait for port to open:
-  Serial.begin(115200);
-  Wire.begin();
-  lcd.begin();
-  lcd.backlight();
-
-  while (!Serial) {
-    ;  // wait for serial port to connect. Needed for native USB port only
-  }
-
-  Serial.println("Initializing SD card...");
-
-  if (!SD.begin(SD_CS)) {
-    Serial.println("SD card not found");
-    lcd.setCursor(0, 0);
-    lcd.print("SD Card");
-    lcd.setCursor(0, 1);
-    lcd.print("Not found!!");
-    while (1)
-      ;
-  }
-
-  //dataProgram.readFromSD();
-  // delay(2000);
-  // Example of updating a value
-  // dataProgram.updateValue("Lots", "15");
-  dataProgram.MinResistance = readLong(0);
-  dataProgram.MaxResistance = readLong(4);
-  dataProgram.IsBuzzer = readLong(20);
-  // Update DATE
-  UpdateDateTime();
-  // Set DATE TO FILENAME
-  dataProgram.FileName = "h" + String(year) + String(month) + String(day);
-  Serial.println("done.");
-}
-
-void loop() {
-  buttonEsc.update();
-  buttonEnter.update();
-  buttonUp.update();
-  buttonDown.update();
-  // Read the current time
-  a2d_data = analogRead(A0);  // read the value from the sensor
-  buffer = a2d_data * Vin;    // buffer the data for smoothing
-  Volt = (buffer) / 1024.0;
-  buffer = Volt / (Vin - Volt);
-  R2 = R1 * buffer;  // calculate the resistance of the sensor
-
-  if (display != oldDisplay || setings != oldSetings || pages != oldPages || IsChangeMenu) {
-    lcd.noBlink();
-    //Serial.println("UpdateLCD");
-    oldDisplay = display;
-    oldSetings = setings;
-    oldPages = pages;
-    IsChangeMenu = false;
-    UpdateLCD();
-  }
-
-  if (millis() - lastTimeMain >= 1000) {
-
-    if (display == Settings) {
-      countUseMenu++;
-      if (countUseMenu >= 30) {
-        display = Home;
-        setings = TIME;
-        countUseMenu = 0;
-      }
-      if (IsPress) {
-        countPress++;
-        Serial.println("countPress: " + String(countPress));
-      } else {
-        countPress = 0;
-      }
-    }
-    lastTimeMain = millis();
-  }
-
-  if (millis() - lastTimeBtnPress > 50) {
-    // Serial.println("R2: " + String(R2));
-    // ---------------------------- BUTTON PRESS ---------------------------------- //
-    if (IsPress && countPress > 1 && display == Settings && setings != Index) {
-      if (currentButtonState == BUTTON_STATE::UP || currentButtonState == BUTTON_STATE::DOWN) {
-        Serial.println("Press: " + String(countPress));
-        BUTTON_PUSHES(currentButtonState);
-      }
-    }
-    lastTimeBtnPress = millis();
-  }
-}
-
-void UpdateDateTime() {
-  t = rtc.getTime();
-  day = t.date;
-  month = t.mon;
-  year = t.year;
-  hour = t.hour;
-  minute = t.min;
-  second = t.sec;
-}
+// -------------------- Display -----------------------
 void UpdateLCD() {
 
   switch (display) {
@@ -266,26 +27,25 @@ int GetDigit(float input) {
   if (input < 10000)
     return 4;
   if (input < 100000)
-    return 5;
-  if (input < 1000000)
     return 6;
   return 7;
 }
 
 String GetUnit(float input) {
-  if (input > 1000 && input < 1000000) {
+  if (input > 1000.0 && input < 1000000.0) {
     return String(input / 1000.0, 2) + "k";
-  } else if (input >= 1000000) {
+  } else if (input >= 1000000.0) {
     return String(input / 1000000.0, 2) + "M";
-  } else {
-    return String(input, 2);
   }
+  return String(input, 2);
 }
+
 
 String result = "";
 String oldResult = "A";
+// -------------------- Display Home -----------------------
 void DisplayHome() {
-  if (millis() - lastTimeDisplay > 100) {
+  if (millis() - lastTimeDisplay > 500) {
     // ---------------------------- Display Home ---------------------------------- //
     String result = CalculateResistor(R2);
     if (digitResistor != oldDigitResistor || result != oldResult) {
@@ -293,9 +53,18 @@ void DisplayHome() {
       oldDigitResistor = digitResistor;
       oldResult = result;
     }
+
+    // Serial.print("result: ");
+    // Serial.print(a2d_data);
+    // Serial.print(", R2: ");
+    // Serial.println(R2);
     digitResistor = GetDigit(R2);
 
     if (R2 < 600000) {
+
+      Serial.print("Unit: ");
+      Serial.println(GetUnit(R2));
+
       lcd.setCursor(0, 0);
       lcd.print("R: ");
       lcd.print(GetUnit(R2));
@@ -325,16 +94,6 @@ String CalculateResistor(float input) {
   if (IsRange(input, dataProgram.MinResistance, dataProgram.MaxResistance)) {
     if (IsRangeReset == true) {
       if (dataProgram.IsBuzzer) {
-        // UpdateDateTime();
-
-        // dataProgram.Measurement = String(R2);
-        // dataProgram.Min = String(dataProgram.MinResistance);
-        // dataProgram.Max = String(dataProgram.MinResistance);
-        // dataProgram.Date = String(day)+"/"+String(month)+"/"+String(year);
-        // dataProgram.Time =  String(hour)+":"+String(minute)+":"+String(second);
-        // dataProgram.writeHistoryToSD();
-
-
         tone(BUZZER_PIN, 600, 100);
         delay(200);
         tone(BUZZER_PIN, 600, 100);
@@ -372,26 +131,6 @@ bool IsRange(float input, float min, float max) {
   return false;
 }
 
-void writeLong(uint32_t address, uint32_t value) {
-  byte byte1 = (value & 0xFF);
-  byte byte2 = ((value >> 8) & 0xFF);
-  byte byte3 = ((value >> 16) & 0xFF);
-  byte byte4 = ((value >> 24) & 0xFF);
-
-  EEPROM.update(address, byte1);
-  EEPROM.update(address + 1, byte2);
-  EEPROM.update(address + 2, byte3);
-  EEPROM.update(address + 3, byte4);
-}
-
-uint32_t readLong(uint32_t address) {
-  uint32_t value = 0;
-  value |= EEPROM.read(address);
-  value |= ((uint32_t)EEPROM.read(address + 1) << 8);
-  value |= ((uint32_t)EEPROM.read(address + 2) << 16);
-  value |= ((uint32_t)EEPROM.read(address + 3) << 24);
-  return value;
-}
 
 void DisplaySettings() {
   lcd.noCursor();
@@ -577,7 +316,7 @@ void DisplayRange() {
       lcd.setCursor(0, 0);
       lcd.print(">BUZZER : " + GetBuzzer());
       lcd.setCursor(0, 1);
-      lcd.print(" MIN :" + String(_min)+"Ohm");
+      lcd.print(" MIN :" + String(_min));
       break;
     case ON:
       lcd.setCursor(0, 0);
@@ -599,7 +338,8 @@ void DisplayRange() {
       pages = Index;
       // IsBuzzer = select;
       dataProgram.IsBuzzer = IsBuzzerSelect;
-      writeLong(20, dataProgram.IsBuzzer);
+      dataProgram.writeToSD();
+      // writeLong(20, dataProgram.IsBuzzer);
       delay(1000);
       IsChangeMenu = true;
       break;
@@ -615,7 +355,7 @@ void DisplayMin() {
       lcd.print(" BUZZER : " + GetBuzzer());
       lcd.setCursor(0, 1);
       _min = dataProgram.MinResistance;
-      lcd.print(">MIN :" + String(_min)+"Ohm");
+      lcd.print(">MIN :" + String(_min));
       break;
     case Set:
       lcd.setCursor(0, 0);
@@ -631,7 +371,8 @@ void DisplayMin() {
       pages = Index;
       // IsBuzzer = select;
       dataProgram.MinResistance = _min;
-      writeLong(0, dataProgram.MinResistance);
+      dataProgram.writeToSD();
+      // writeLong(0, dataProgram.MinResistance);
       delay(1000);
       IsChangeMenu = true;
       break;
@@ -644,7 +385,7 @@ void DisplayMax() {
     case Index:
       _max = dataProgram.MaxResistance;
       lcd.setCursor(0, 0);
-      lcd.print(">MAX :" + String(_max)+"Ohm");
+      lcd.print(">MAX :" + String(_max));
       lcd.setCursor(0, 1);
       lcd.print(" ");
       break;
@@ -662,7 +403,8 @@ void DisplayMax() {
       pages = Index;
       // IsBuzzer = select;
       dataProgram.MaxResistance = _max;
-      writeLong(4, dataProgram.MaxResistance);
+      // writeLong(4, dataProgram.MaxResistance);
+      dataProgram.writeToSD();
       delay(1000);
       IsChangeMenu = true;
       break;
@@ -674,52 +416,6 @@ String GetBuzzer() {
     return "ON";
   }
   return "OFF";
-}
-// -------------------- Button Esc --------------------
-void ButtonEscPressed(void) {
-  BUTTON_PUSHES(ESC);
-  currentButtonState = BUTTON_STATE::ESC;
-  IsPress = true;
-  countPress = 0;
- // Serial.println("ButtonEscPressed: ");
-}
-
-void ButtonEscReleased(void) {
-  IsPress = false;
-}
-
-// -------------------- Button Enter --------------------
-void ButtonEnterPressed(void) {
-  BUTTON_PUSHES(ENTER);
-  currentButtonState = BUTTON_STATE::ENTER;
-  IsPress = true;
-  countPress = 0;
-}
-
-void ButtonEnterReleased(void) {
-  IsPress = false;
-}
-// -------------------- Button Up --------------------
-void ButtonUpPressed(void) {
-  BUTTON_PUSHES(UP);
-  currentButtonState = BUTTON_STATE::UP;
-  IsPress = true;
-  countPress = 0;
-}
-
-void ButtonUpReleased(void) {
-  IsPress = false;
-}
-// -------------------- Button Down --------------------
-void ButtonDownPressed(void) {
-  BUTTON_PUSHES(DOWN);
-  currentButtonState = BUTTON_STATE::DOWN;
-  IsPress = true;
-  countPress = 0;
-}
-
-void ButtonDownReleased(void) {
-  IsPress = false;
 }
 
 // -------------------- FUNCTION -------------------- //
@@ -1124,4 +820,61 @@ String GetStatus() {
   }
 
   return status;
+}
+
+// -------------------- Button Esc --------------------
+void ButtonEscPressed(void) {
+  BUTTON_PUSHES(ESC);
+  currentButtonState = BUTTON_STATE::ESC;
+  IsPress = true;
+  countPress = 0;
+  Serial.println("ButtonEscPressed: ");
+}
+
+void ButtonEscReleased(void) {
+  IsPress = false;
+}
+
+// -------------------- Button Enter --------------------
+void ButtonEnterPressed(void) {
+  BUTTON_PUSHES(ENTER);
+  currentButtonState = BUTTON_STATE::ENTER;
+  IsPress = true;
+  countPress = 0;
+}
+
+void ButtonEnterReleased(void) {
+  IsPress = false;
+}
+// -------------------- Button Up --------------------
+void ButtonUpPressed(void) {
+  BUTTON_PUSHES(UP);
+  currentButtonState = BUTTON_STATE::UP;
+  IsPress = true;
+  countPress = 0;
+}
+
+void ButtonUpReleased(void) {
+  IsPress = false;
+}
+// -------------------- Button Down --------------------
+void ButtonDownPressed(void) {
+  BUTTON_PUSHES(DOWN);
+  currentButtonState = BUTTON_STATE::DOWN;
+  IsPress = true;
+  countPress = 0;
+}
+
+void ButtonDownReleased(void) {
+  IsPress = false;
+}
+
+void UpdateDateTime() {
+  t = rtc.getTime();
+  day = t.date;
+  month = t.mon;
+  year = t.year;
+  hour = t.hour;
+  minute = t.min;
+  second = t.sec;
 }

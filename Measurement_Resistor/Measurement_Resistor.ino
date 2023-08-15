@@ -350,11 +350,11 @@ String GetUnit(float input) {
     return String(input, 2);
   }
 }
+
 String result = "";
 String oldResult = "A";
 void DisplayHome() {
   if (millis() - lastTimeDisplay > 100) {
-
     // ---------------------------- Display Home ---------------------------------- //
     String result = CalculateResistor(R2);
     if (digitResistor != oldDigitResistor || result != oldResult) {
@@ -380,16 +380,13 @@ void DisplayHome() {
       lcd.print("Res :" + result);
     }
     // ---------------------------- END Display Home ---------------------------------- //
-
-
-
-
     lastTimeDisplay = millis();
   } else if (millis() < 100) {
     lastTimeDisplay = millis();
   }
   IsChangeMenu = true;
 }
+
 bool IsRangeChange = false;
 bool IsRangeReset = false;
 
